@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title></title>
+<link href="style.css" rel="stylesheet" type="text/css" >
+<script src="move.js"></script>
+<script src="myfunction.js"></script>
+<script src="Data.js"></script>
+<script type="text/javascript">
+
+//移到图标上后1秒后右上放出现x可以删除图标,恢复原来样式
+window.onload = function(){
+	var oWrap = document.getElementById('wrap');
+	var oMenu = document.getElementById('menu');
+	var oModif = getByClass(oMenu,'modify')[0];
+	var oDel = getByClass(oMenu,'delete')[0];
+	var oCol = document.getElementById('collection');
+	var oColImgBox = getByClass(oCol,'collectImg')[0];
+	var currentA = null;
+	var ifModify = true;
+	var str = '';
+	var arrPos = [];
+	var zIndex = 2;
+	//前面有内容的innerHTML
+	for (var i=0; i<12; i++) {
+		str += '<a></a>';
+	}
+	oWrap.innerHTML = str;
+	var aA = oWrap.getElementsByTagName('a');
+	
+	for (var i=0; i<12; i++) {
+		var oImg = document.createElement('img');
+		oImg.src = 'img/'+ toDou(i+1) +'.png';
+		oColImgBox.appendChild(oImg);
+		arrPos.push({left:aA[i].offsetLeft,top:aA[i].offsetTop});
+	}
+	
+	for (var i=0; i<aA.length; i++) { 
+		//将每个aA的位置记录成对应的aA的位置
+		aA[i].style.left = arrPos[i].left + 'px';
+		aA[i].style.top = arrPos[i].top + 'px';
+		aA[i].index = i;
+		aA[i].style.position = 'absolute';
+		aA[i].style.margin = 0;	
+	}
+	oWrap.innerHTML = '';
+	str = '';
+	function initialize(num){ 
+		//前面有内容的innerHTML
+		for (var i=0; i<num; i++) {
+			str += '<a href="javascript:;"><img src="img/'+ toDou(i+1) +'.png"><p>'+ arrDate[i].description +'</p></a>';
+		}
+		//一个空的内容的li的innerHTML
+		str += '<a class="last" href="javascript:;"><span class="add"></span></a>';	
+		oWrap.innerHTML = str;
+	}
+	
+	initialize(9); //根据传入的数字，初始化一开始已经有的应用数量，再加上一个用于添加应用的a标签
+
+	var oALast = getByClass(document,'last')[0];
+
+	for (var i=0; i<aA.length; i++) { 
+		//将每个aA的位置记录成对应的aLi的位置
+		aA[i].style.left = arrPos[i].left + 'px';
+		aA[i].style.top = arrPos[i].top + 'px';
+		aA[i].index = i;
+		aA[i].style.position = 'absolute';
+		aA[i].style.margin = 0;	
+	}
+	
+	function delForward(oA){	//还是考虑到所有a都是按照Index大小来排列的，所以只能把它们根据index放进新数组再进行排序，当删除某个a时，记录它的index，让所有index都比它大的a都index-1，再都往前移一格
+		var m = oA.index;
+		var arrA = [];
+		for (var i=0; i<aA.length; i++ ) {
+			if(aA[i].index>=m){
+				arrA.push(aA[i]);
+			}
+		}
+		for (var i=0; i<arrA.length; i++) {
+			arrA[i].index -=1;
+			startMove(arrA[i],arrPos[arrA[i].index],{duration:500});
+		}
+	}
+	
+	function changePos(m,n){ //给定2个index，判断2个index大小，并且让它们之间的a全部往指定方向移动
+		var arrA = [];
+		var arrIndex = [];
+		if(m<n){
+			//先找出所有index在m和n范围内的a，存到数组arrA里
+			for (var i=0; i<aA.length; i++) {
+				if (aA[i].index >= m && aA[i].index <= n){
+					arrA.push(aA[i]);
+				}
+			}
+			arrA.sort(function(n1,n2){
+				return n1.index-n2.index;
+			});
+			arrA[0].index = arrA[arrA.length-1].index;
+			startMove(arrA[0],arrPos[arrA[0].index],{duration:500});
+			
+			for (var i=1; i<arrA.length; i++) {
+				arrA[i].index -= 1;
+				startMove(arrA[i],arrPos[arrA[i].index],{duration:500});		
+			}
+		}else if(m>n){
+			for (var i=0; i<aA.length; i++) {
+				if (aA[i].index >= n && aA[i].index <= m){
+					arrA.push(aA[i]);
+					arrIndex.push(aA[i].index)
+				}
+			}
+			arrA.sort(function(n1,n2){
+				return n2.index-n1.index;
+			});
+			
+			arrA[0].index = arrA[arrA.length-1].index;
+			startMove(arrA[0],arrPos[arrA[0].index],{duration:200});
+			
+			for (var i=1; i<arrA.length; i++) {
+				arrA[i].index += 1;
+				startMove(arrA[i],arrPos[arrA[i].index],{duration:200});		
+			}
+		}
+	}
+	
+	oWrap.oncontextmenu = function(ev){
+		var ev = ev || event;
+		var oSrc = ev.srcElement || ev.target;
+		if(oSrc.tagName  == 'IMG' && oSrc.parentNode.tagName == 'A' ){
+			oSrc = oSrc.parentNode;
+			oMenu.style.zIndex = zIndex++;
+			oMenu.style.left = ev.clientX + 'px';
+			oMenu.style.top = ev.clientY + 'px';
+			oMenu.style.display = 'block';
+				oModif.onclick = function(ev){ //弹出窗口
+					var ev = ev || event;
+					ifModify = true;
+					oCover.style.display = 'block';
+					oCol.style.display = 'block';
+					oCover.style.zIndex = zIndex++;
+					currentIndex = oSrc.index;
+					currentA = oSrc;
+					if(ev.stopPropagation){
+						ev.stopPropagation();
+					}else{
+						ev.cancelBubble = true;
+					}					
+				};
+				oDel.onclick = function(){	//删除该图标
+					var m = oSrc.index;
+					var oP = oSrc.parentNode.getElementsByTagName('p')[0];
+					var oImg = oSrc.parentNode.getElementsByTagName('img')[0];
+					var oLi = oSrc.parentNode;
+					
+					startMove(oSrc,{top:oSrc.offsetTop-100,opacity:0},{duration:300,complete:function(){
+						oLi.removeChild(oSrc);
+						delForward(oSrc);
+						
+						if(aA.length == 12){ 
+							oALast.style.opacity = 0;
+							oALast.style.display = 'block';
+							document.title = oALast.index;
+							startMove(oALast,{opacity:1},{duration:200});
+						}else{
+							
+						}
+					}});
+				};
+			return false;			
+		}
+		document.onmousemove = function(){
+			return false;
+		};
+	};
+	
+	oWrap.onmousedown = function(ev){ //准备拖动所有a，除了最后一个
+		var ev = ev || event;
+		if(ev.button == 2){	//这里要求是左键，如果是右键按下就直接跳出函数
+			return;
+		}
+		var oSrc = ev.srcElement || ev.target;
+		if(oSrc.tagName  == 'IMG' && oSrc.parentNode.tagName == 'A' ){
+			oSrc = oSrc.parentNode;
+			var disX = ev.clientX - oSrc.offsetLeft;
+			var disY = ev.clientY - oSrc.offsetTop;
+			var touched = false;
+			oSrc.style.zIndex = zIndex++;
+			document.onmousemove = function(ev){
+				var ev = ev || event;
+				oSrc.style.left = ev.clientX - disX + 'px';
+				oSrc.style.top = ev.clientY - disY + 'px'; 
+				var arrTmp = getArrayByIndex(aA);
+				for (var i=0; i<arrTmp.length; i++) { 
+					if( testColl(oSrc,arrTmp[i]) && oSrc!=arrTmp[i] && getDis(oSrc,arrTmp[i])<=80){
+						var _thisA = arrTmp[i];
+						clearTimeout(arrTmp[i].timer);//开定时器前先要清，保证一直都只有一个定时器在运行
+						arrTmp[i].timer = setTimeout(function(){
+							var m = oSrc.index;
+							var n = _thisA.index;
+							changePos(m,n);
+							touched = true;
+							document.onmousemove = null
+						},30);
+					}else{
+						clearTimeout(arrTmp[i].timer);
+						touched = false;
+					}
+				}
+				return false;
+			};
+			document.onmouseup = function(){
+				if(!touched){
+					startMove(oSrc,arrPos[oSrc.index],{duration:500});
+				}
+				document.onmousemove = document.onmouseup = null;
+			};
+			return false;			
+		}
+	};		
+	
+	document.onclick = function(){ //点击页面任意地方让menu消失
+		oMenu.style.display = 'none';
+		oCol.style.display = 'none';
+	};
+	
+	oCol.onclick = function(ev){
+		var ev = ev || event;
+		oCol.style.display = 'block';
+		if(ev.stopPropagation){
+			ev.stopPropagation();
+		}else{
+			ev.cancelBubble = true;
+		}
+	}
+	
+	var oAdd = getByClass(document,'add')[0]; //这个就是最后一个a可以添加应用的那个加号按钮
+	var oCover = document.getElementById('cover');//半透明遮罩层
+	var currentIndex = 0;	//点击加号时，那个a的下标
+	oAdd.parentNode.onclick = function(ev){
+		//点击加号后，弹出层要弹出，并且阻止冒泡
+		var ev = ev || event;
+		ifModify = false;
+		oCover.style.display = 'block';
+		oCol.style.display = 'block';
+		oCover.style.zIndex = zIndex++;
+		oCol.style.zIndex = oCover.style.zIndex+1;
+		currentIndex = this.index; //将有加号按钮的a的index存入curretnIndex
+		if(ev.stopPropagation){
+			ev.stopPropagation();
+		}else{
+			ev.cancelBubble = true;
+		}
+	};
+	oCover.onclick = function(){
+		this.style.display = 'none';
+	}
+	//这段给是弹窗里的12个图标加点击事件
+	var oName = oCol.getElementsByTagName('input')[0];
+	var oAddress = oCol.getElementsByTagName('input')[1];
+	var oAddBtn = oCol.getElementsByTagName('span')[0];
+	var aColImg = oCol.getElementsByTagName('img');
+	var addIndex = 0;	//按的小图标的下标x
+	for (var i=0; i<aColImg.length; i++) {
+		aColImg[i].index = i;
+		aColImg[i].onclick = function(ev){
+			var ev = ev || event;
+			oName.value = arrDate[this.index].description;
+			oAddress.value = arrDate[this.index].link;
+			addIndex = this.index;
+			if(ev.stopPropagation){
+				ev.stopPropagation();
+			}else{
+				ev.cancelBubble = true;
+			}			
+		};
+	}
+	var aP = oWrap.getElementsByTagName('p');
+	oAddBtn.onclick = function(ev){ //最后提交新应用点击的添加按钮
+		var ev = ev || event;
+		if(ev.stopPropagation){
+			ev.stopPropagation();
+		}
+		ev.cancelBubble = true;
+		for (var i=0; i<aP.length; i++) {
+			if(aP[i].innerHTML == oName.value){
+				alert('你要添加的网址已经添加过了，请重新选择！');
+				oCol.style.display = 'block';
+				oCover.style.display = 'block';
+				return;
+			}
+		}
+		oMenu.style.display = 'none';
+		oCover.style.display = 'none';
+		oCol.style.display = 'none';
+		if(ifModify){
+			currentA.getElementsByTagName('img')[0].src = arrDate[addIndex].img;
+			currentA.getElementsByTagName('p')[0].innerHTML = arrDate[addIndex].description;
+			currentA.src = arrDate[addIndex].src;
+		}else{
+			//那这个带加号的a的index就是
+			//- 应该新添加的a的位置	//- 然后它自己往后移一格	//- 然后index再自增，
+			//- 新添加的a的位置就在这里	//-新加的a的index也就这个位置的值
+			var oNewA = document.createElement('a');
+			oNewA.innerHTML = '<img src="img/'+ toDou(addIndex+1) +'.png"><p>'+ arrDate[addIndex].description +'</p><span></span>';
+			oNewA.style.left = arrPos[currentIndex].left + 'px';
+			oNewA.style.top = arrPos[currentIndex].top + 'px';
+			oNewA.index = currentIndex;
+			oNewA.style.position = 'absolute';
+			oNewA.style.margin = 0;
+			oWrap.appendChild(oNewA);
+			oALast.index +=1;//当前添加按钮的A要index+1，然后往后移一格
+			if(currentIndex==11){//如果已经是最后一格，就直接消失
+				oALast.style.display = 'none';
+				
+			}else{
+				startMove(oALast,arrPos[oALast.index]);			
+			}
+		}
+		document.title = oALast.index;
+	};
+};
+</script>
+</head>
+<body>
+	<div id="cover"></div>
+	<div id="wrap">
+	</div>
+	<ul id="menu">
+		<li class="modify">修改</li>
+		<li class="delete">删除</li>
+	</ul>
+	<div id="collection">
+		<h3>添加应用</h3>
+		<dl>
+			<dt>应用名称</dt>
+			<dd><input type="text"></dd>
+			<dd><span>添加</span></dd>
+		</dl>
+		<dl>
+			<dt>应用链接</dt>
+			<dd><input type="text" value="例如：cn.bing.com"></dd>
+		</dl>
+		<div class="collectImg">
+		</div>
+	</div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
